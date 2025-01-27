@@ -6,7 +6,7 @@ A Python tool for automating pipetting worksheets generation for the iDot liquid
 
 ## Installation
 
-pipinstallgit+https://github.com/phisanti/iDot_tools
+pipinstallgit+https://github.com/phisanti/e019_iDot_scheduler
 
 ## Usage
 
