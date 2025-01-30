@@ -1,26 +1,25 @@
-#  
-
 # iDot Scheduler Tool
 
 A Python tool for automating pipetting worksheets generation for the iDot liquid dispenser. The tool helps optimize plate layouts and create standardized worklists.
 
 ## Installation
 
-pipinstallgit+https://github.com/phisanti/iDot_scheduler
+```bash
+pip install git+https://github.com/phisanti/iDot_scheduler
+```
 
 ## Usage
 
 Currently, it works as CLI tool. It can be used as follows:
 
 ```bash
-python ./src/iDot_tools/main.py <source_folder> <input_file>
+idot-scheduler
 ```
 
-Example:
+This should launch the GUI:
+![iDot Scheduler Demo](docs/example_usage.gif)
 
-```bash
-python ./src/iDot_tools/main.py ./data/sources/ 'input_example.xlsx'
-```
+Otherwise, click on the local URL (e. g. Running on local URL:  http://127.0.0.1:7860).
 
 ### Input Requirements
 

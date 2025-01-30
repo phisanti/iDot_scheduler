@@ -59,4 +59,7 @@ if __name__ == "__main__":
     from .utils import process_file, generate_worklist, read_instructions
     
     app = iDotScheduler()
-    app.launch()
+    app.launch(
+                inbrowser=True,  
+                share=False      
+    )
