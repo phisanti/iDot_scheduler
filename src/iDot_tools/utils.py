@@ -165,37 +165,34 @@ def create_iDot_worklist(data_input: Dict[str, pd.DataFrame]) -> Tuple[pd.DataFr
     return worklist_df.dropna(subset=['Source Well']), na_counts.to_dict()
 
 
-def write_iDot_csv(df: pd.DataFrame, filename: str, worklist_name: str, user: str) -> None:
-    """
-    Write iDot worklist to CSV file in required format.
-    
-    Args:
-        df (pd.DataFrame): Worklist DataFrame
-        filename (str): Output file path
-        worklist_name (str): Name of the worklist
-        user (str): Username for file metadata
-        
-    Returns:
-        None
-    """
+def add_headers(excel_path: str, csv_path: str, worklist_name: str, user: str) -> None:
     current_time = datetime.now()
     date_str = current_time.strftime("%d.%m.%Y")
     time_str = current_time.strftime("%H:%M")
-
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        
-        # Write the first three special rows
-        writer.writerow([worklist_name, '1.10.1.178', user, f"{date_str}", f"{time_str}"])
-        writer.writerow(['S.100 Plate', 'Source Plate 1', '1536_Screenstar', 'Target Plate 1', 'Waste Tube'])
-        writer.writerow(['DispenseToWaste=True', 'DispenseToWasteCycles=3', 'DispenseToWasteVolume=1e-7', 
-                         'UseDeionisation=True', 'OptimizationLevel=ReorderAndParallel', 
-                         'WasteErrorHandlingLevel=Ask', 'SaveLiquids=Ask'])
-        
-        # Write the DataFrame to CSV
-        df.to_csv(csvfile, index=False, mode='a')
-
-    print(f"CSV file '{filename}' has been created successfully.")
+    
+    headers = [
+        [worklist_name, '1.10.1.178', user, date_str, time_str],
+        ['S.100 Plate', 'Source Plate 1', '1536_Screenstar', 'Target Plate 1', 'Waste Tube'],
+        ['DispenseToWaste=True', 'DispenseToWasteCycles=3', 'DispenseToWasteVolume=1e-7',
+         'UseDeionisation=True', 'OptimizationLevel=ReorderAndParallel', 
+         'WasteErrorHandlingLevel=Ask', 'SaveLiquids=Ask']
+    ]
+    
+    # Add headers to Excel
+    df = pd.read_excel(excel_path)
+    with pd.ExcelWriter(excel_path) as writer:
+        pd.DataFrame(headers).to_excel(writer, header=False, index=False)
+        df.to_excel(writer, startrow=len(headers), index=False)
+    
+    # Add headers to CSV
+    with open(csv_path, 'r') as original:
+        content = original.read()
+    
+    with open(csv_path, 'w', newline='') as modified:
+        writer = csv.writer(modified)
+        for row in headers:
+            writer.writerow(row)
+        modified.write(content)
 
 
 def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]:
@@ -230,24 +227,34 @@ def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional
     except Exception as e:
         return None, None, None, None, f"Error: {str(e)}"
 
-def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536) -> str:
+def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, worklist_name: str = "iDot Worklist", user: str = "John Doe") -> str:
+
     """
     Generate iDot worklist files from input data.
     
     Args:
-        input_file (Path): Path to input Excel file
-        output_folder (Path): Directory for output files
-        plate_size (int): Plate format (96, 384 or 1536)
+        input_file (Path): Path to input Excel file containing plate data
+        output_folder (Path): Directory where output files will be saved
+        plate_size (int): Microplate format (96, 384 or 1536 wells)
+        worklist_name (str): Name of the worklist to be generated
+        user (str): Name of the user generating the worklist
         
     Returns:
-        str: Status message with output filenames
+        str: Success message with generated output filenames
         
     Raises:
-        ValueError: If plate_size is invalid
+        ValueError: If plate_size is not 96, 384 or 1536
+        FileNotFoundError: If input_file or output_folder don't exist
     """
+
     if not input_file or not output_folder:
         return "Please select input file and output folder"
-        
+    if not Path(input_file.name).exists():
+        return f"Input file not found: {input_file.name}"
+    
+    if not Path(output_folder).exists():
+        return f"Output folder not found: {output_folder}"
+
     # Read and process dataframes
     dataframes = read_excel_sheets(input_file.name)
     
@@ -270,10 +277,12 @@ def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1
     # Save outputs
     base_name = os.path.splitext(os.path.basename(input_file.name))[0]
     excel_output = os.path.join(output_folder, f"idot_worklist_{base_name}.xlsx")
-    csv_output = os.path.join(output_folder, f"idot_worklist_{base_name}.csv")
-    
+    csv_output = os.path.join(output_folder, f"idot_worklist_{base_name}.csv")    
     idot_wl.to_excel(excel_output, index=False)
     idot_wl.to_csv(csv_output, index=False)
+    
+    # Add headers to both files
+    add_headers(excel_output, csv_output, worklist_name, user)
     
     return f"Worklist generated: {os.path.basename(excel_output)} and {os.path.basename(csv_output)}"
 

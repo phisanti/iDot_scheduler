@@ -13,8 +13,12 @@ def iDotScheduler():
                 with gr.Row():
                     input_file = gr.File(label="Input Excel File")
                     output_folder = gr.Textbox(label="Output Folder")
+                
+                with gr.Row():
+                    worklist_name = gr.Textbox(label="Worklist Name", value="iDot Worklist")
+                    user = gr.Textbox(label="User Name", value="John Doe")
                     plate_size = gr.Dropdown(choices=[96, 384, 1536], value=1536, label="Plate Size")
-                    
+
                 with gr.Row():
                     read_btn = gr.Button("Read Files")
                     generate_btn = gr.Button("Generate Worklist")
@@ -46,7 +50,7 @@ def iDotScheduler():
                 
                 generate_btn.click(
                     generate_worklist,
-                    inputs=[input_file, output_folder, plate_size],
+                    inputs=[input_file, output_folder, plate_size, worklist_name, user],
                     outputs=[output_msg]
                 )
     
