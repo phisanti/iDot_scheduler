@@ -7,11 +7,9 @@ setup(
     package_dir={"": "src"},
     include_package_data=True,
     package_data={
-        "iDot_tools": ["../docs/instructions.md"],
+        "iDot_tools": ["resources/instructions.md"],
     },
-    data_files=[
-        ('docs', ['docs/instructions.md']),
-    ],    install_requires=[
+    install_requires=[
         "gradio",
         "pandas",
         "numpy",
