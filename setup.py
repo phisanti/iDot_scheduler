@@ -2,11 +2,16 @@ from setuptools import setup, find_packages
 
 setup(
     name="iDot_scheduler",
-    version="0.1.0",
+    version="0.1.5",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
-    install_requires=[
+    package_data={
+        "iDot_tools": ["../docs/instructions.md"],
+    },
+    data_files=[
+        ('docs', ['docs/instructions.md']),
+    ],    install_requires=[
         "gradio",
         "pandas",
         "numpy",
