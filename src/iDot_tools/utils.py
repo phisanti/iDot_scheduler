@@ -287,6 +287,6 @@ def read_instructions() -> str:
     """
     import os
     
-    instructions = resource_string(__name__, '../../docs/instructions.md')
+    instructions = resource_string(__name__, 'resources/instructions.md')
     return instructions.decode('utf-8')
 
