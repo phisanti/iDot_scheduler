@@ -18,11 +18,13 @@ pip install git+https://github.com/phisanti/iDot_scheduler
 ```
 
 Requirements: Python 3.9, pandas, gradio, openpyxl, numpy. Note: Install gradio via pip for optimal compatibility.
+
 ## Usage
 
 Currently, it works as CLI tool. It can be used as follows:
 
 ```bash
+conda activate idot_env
 idot-scheduler
 ```
 
@@ -34,10 +36,11 @@ Otherwise, click on the local URL (e. g. Running on local URL:  http://127.0.0.1
 ### Input Requirements
 
 Input Excel file must have these sheets:
-   * [source_id](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Source plate well identifiers
-   * [source_vol](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Available volumes in source plates
-   * [target_id](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Target plate well identifiers
-   * [target_vol](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Required volumes in target plates
+
+* [source_id](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Source plate well identifiers
+* [source_vol](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Available volumes in source plates
+* [target_id](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Target plate well identifiers
+* [target_vol](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html): Required volumes in target plates
 
 ### Output
 
