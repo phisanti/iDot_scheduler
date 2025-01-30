@@ -2,9 +2,8 @@
 
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import json
-from iDot_tools.utils import read_excel_sheets, melt_and_combine, create_iDot_worklist, write_iDot_csv
+from .utils import read_excel_sheets, melt_and_combine, create_iDot_worklist
+from .constants import ROWDICT
 
 def main(source_folder, source_file):
     file_path = os.path.join(source_folder, source_file)
@@ -12,13 +11,10 @@ def main(source_folder, source_file):
     for sheet_name, df in dataframes.items():
         print(f"File: {sheet_name}, Sheet: {sheet_name}")
 
-    with open(os.path.join(source_folder, 'dict_1536platecol_id.json'), 'r') as f:
-        coldict = json.load(f)
-
     melted_dataframes = {}
 
     for sheet_name, df in dataframes.items():
-        melted_dataframes[sheet_name] = melt_and_combine(df, coldict)
+        melted_dataframes[sheet_name] = melt_and_combine(df, ROWDICT)
 
     idot_wl, na_count = create_iDot_worklist(melted_dataframes)
     
