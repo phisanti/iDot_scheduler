@@ -166,6 +166,21 @@ def create_iDot_worklist(data_input: Dict[str, pd.DataFrame]) -> Tuple[pd.DataFr
 
 
 def add_headers(excel_path: str, csv_path: str, worklist_name: str, user: str) -> None:
+    """
+    Add standardized headers to Excel and CSV worklist files.
+    
+    Args:
+        excel_path (str): Path to Excel worklist file
+        csv_path (str): Path to CSV worklist file  
+        worklist_name (str): Name of the worklist
+        user (str): Name of the user generating the worklist
+        
+    Returns:
+        None
+        
+    Raises:
+        FileNotFoundError: If excel_path or csv_path don't exist
+    """
     current_time = datetime.now()
     date_str = current_time.strftime("%d.%m.%Y")
     time_str = current_time.strftime("%H:%M")
