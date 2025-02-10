@@ -19,6 +19,7 @@ def iDotScheduler():
                     worklist_name = gr.Textbox(label="Worklist Name", value="iDot Worklist")
                     user = gr.Textbox(label="User Name", value="John Doe")
                     plate_size = gr.Dropdown(choices=[96, 384, 1536], value=1536, label="Plate Size")
+                    clean_labels = gr.Checkbox(label="Clean parallel channel labels", value=False)
 
                 with gr.Row():
                     source_plate_type = gr.Dropdown(choices=["S.100 Plate", "S.200 Plate"], value="S.200 Plate", label="Source Plate Type")
@@ -62,20 +63,21 @@ def iDotScheduler():
                         inputs[0],  # input_file
                         inputs[1],  # output_folder
                         inputs[2],  # plate_size
+                        inputs[3],  # plate_size
                         {
-                            'worklist_name': inputs[3],
-                            'user': inputs[4],
-                            'source_plate_type': inputs[5],
-                            'source_name': inputs[6],
-                            'target_type': inputs[7],
-                            'target_name': inputs[8],
-                            'dispense_to_waste': inputs[9],
-                            'deionisation': inputs[10],
-                            'optimization': inputs[11]
+                            'worklist_name': inputs[4],
+                            'user': inputs[5],
+                            'source_plate_type': inputs[6],
+                            'source_name': inputs[7],
+                            'target_type': inputs[8],
+                            'target_name': inputs[9],
+                            'dispense_to_waste': inputs[10],
+                            'deionisation': inputs[11],
+                            'optimization': inputs[12]
                         }
                     ),
                     inputs=[
-                        input_file, output_folder, plate_size, worklist_name, user,
+                        input_file, output_folder, plate_size, clean_labels, worklist_name, user,
                         source_plate_type, source_name, target_type, target_name,
                         dispense_waste, deionisation, optimization
                     ],

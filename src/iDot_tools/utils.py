@@ -114,7 +114,7 @@ def validate_volumes(source_wells_df: pd.DataFrame, volume: float, liquid_name: 
     
     return valid_wells['Well']
 
-def create_iDot_worklist(data_input: Dict[str, pd.DataFrame]) -> Tuple[pd.DataFrame, Dict[str, int]]:
+def create_iDot_worklist(data_input: Dict[str, pd.DataFrame], clean_labels: bool = False) -> Tuple[pd.DataFrame, Dict[str, int]]:
     """
     Generate iDot worklist from input plate data.
     
@@ -161,6 +161,9 @@ def create_iDot_worklist(data_input: Dict[str, pd.DataFrame]) -> Tuple[pd.DataFr
     
     worklist_df = pd.DataFrame(worklist_entries).sort_values(by='Target Well')
     na_counts = worklist_df[worklist_df['Source Well'].isna()]['Liquid Name'].value_counts()
+    
+    if clean_labels:
+        worklist_df['Liquid Name'] = worklist_df['Liquid Name'].str.replace(r'-\d+$', '', regex=True)
     
     return worklist_df.dropna(subset=['Source Well']), na_counts.to_dict()
 
@@ -256,7 +259,7 @@ def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional
     except Exception as e:
         return None, None, None, None, f"Error: {str(e)}"
 
-def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, header_config: dict = None) -> str:
+def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, clean_labels: bool = False, header_config: dict = None) -> str:
 
     """
     Generate iDot worklist files from input data.
@@ -300,7 +303,7 @@ def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1
     }
     
     # Generate worklist
-    idot_wl, na_count = create_iDot_worklist(melted_dataframes)
+    idot_wl, na_count = create_iDot_worklist(melted_dataframes, clean_labels=clean_labels)
     
     # Save outputs
     base_name = os.path.splitext(os.path.basename(input_file.name))[0]
