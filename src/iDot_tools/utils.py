@@ -165,7 +165,19 @@ def create_iDot_worklist(data_input: Dict[str, pd.DataFrame]) -> Tuple[pd.DataFr
     return worklist_df.dropna(subset=['Source Well']), na_counts.to_dict()
 
 
-def add_headers(excel_path: str, csv_path: str, worklist_name: str, user: str) -> None:
+def add_headers(
+    excel_path: str, 
+    csv_path: str, 
+    worklist_name: str,
+    user: str,
+    source_plate_type: str = "S.200 Plate",
+    source_name: str = "Source Plate 1",
+    target_type: str = "1536_Screenstar",
+    target_name: str = "Target Plate 1",
+    dispense_to_waste: bool = True,
+    deionisation: bool = True,
+    optimization: str = "ReorderAndParallel"
+) -> None:
     """
     Add standardized headers to Excel and CSV worklist files.
     
@@ -173,33 +185,35 @@ def add_headers(excel_path: str, csv_path: str, worklist_name: str, user: str) -
         excel_path (str): Path to Excel worklist file
         csv_path (str): Path to CSV worklist file  
         worklist_name (str): Name of the worklist
-        user (str): Name of the user generating the worklist
-        
-    Returns:
-        None
-        
-    Raises:
-        FileNotFoundError: If excel_path or csv_path don't exist
+        user (str): Name of the user
+        source_plate_type (str): Type of source plate
+        source_name (str): Name of source plate
+        target_type (str): Type of target plate
+        target_name (str): Name of target plate
+        dispense_to_waste (bool): Enable waste dispense
+        deionisation (bool): Enable deionisation
+        optimization (str): Optimization level
     """
     current_time = datetime.now()
-    date_str = current_time.strftime("%d.%m.%Y")
-    time_str = current_time.strftime("%H:%M")
     
+    # Ensure 8 columns for each header row
     headers = [
-        [worklist_name, '1.10.1.178', user, date_str, time_str],
-        ['S.100 Plate', 'Source Plate 1', '1536_Screenstar', 'Target Plate 1', 'Waste Tube'],
-        ['DispenseToWaste=True', 'DispenseToWasteCycles=3', 'DispenseToWasteVolume=1e-7',
-         'UseDeionisation=True', 'OptimizationLevel=ReorderAndParallel', 
-         'WasteErrorHandlingLevel=Ask', 'SaveLiquids=Ask']
+        [worklist_name, '1.10.1.178', user, current_time.strftime("%d.%m.%Y"), 
+         current_time.strftime("%H:%M"), '', '', ''],
+        [source_plate_type, source_name, target_type, target_name, 'Waste Tube', '', '', ''],
+        [f'DispenseToWaste={str(dispense_to_waste)}', 'DispenseToWasteCycles=3',
+         'DispenseToWasteVolume=1e-7', f'UseDeionisation={str(deionisation)}',
+         f'OptimizationLevel={optimization}', 'WasteErrorHandlingLevel=Ask',
+         'SaveLiquids=Ask', '']
     ]
-    
-    # Add headers to Excel
+
+    # Update Excel
     df = pd.read_excel(excel_path)
     with pd.ExcelWriter(excel_path) as writer:
         pd.DataFrame(headers).to_excel(writer, header=False, index=False)
         df.to_excel(writer, startrow=len(headers), index=False)
     
-    # Add headers to CSV
+    # Update CSV with consistent column count
     with open(csv_path, 'r') as original:
         content = original.read()
     
@@ -242,7 +256,7 @@ def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional
     except Exception as e:
         return None, None, None, None, f"Error: {str(e)}"
 
-def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, worklist_name: str = "iDot Worklist", user: str = "John Doe") -> str:
+def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, header_config: dict = None) -> str:
 
     """
     Generate iDot worklist files from input data.
@@ -251,8 +265,7 @@ def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1
         input_file (Path): Path to input Excel file containing plate data
         output_folder (Path): Directory where output files will be saved
         plate_size (int): Microplate format (96, 384 or 1536 wells)
-        worklist_name (str): Name of the worklist to be generated
-        user (str): Name of the user generating the worklist
+        header_config (dict): Dictionary containing header configuration parameters
         
     Returns:
         str: Success message with generated output filenames
@@ -292,12 +305,20 @@ def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1
     # Save outputs
     base_name = os.path.splitext(os.path.basename(input_file.name))[0]
     excel_output = os.path.join(output_folder, f"idot_worklist_{base_name}.xlsx")
-    csv_output = os.path.join(output_folder, f"idot_worklist_{base_name}.csv")    
-    idot_wl.to_excel(excel_output, index=False)
-    idot_wl.to_csv(csv_output, index=False)
+    csv_output = os.path.join(output_folder, f"idot_worklist_{base_name}.csv")
+    
+    # Headers have 8 cols, thus add empty cols for consistency
+    main_columns = idot_wl.columns.tolist()
+    empty_cols = [''] * 3  
+    csv_headers = main_columns + empty_cols
+    for i in range(3):
+        idot_wl[f'__empty_{i}'] = ''
+    
+    idot_wl.to_excel(excel_output, index=False, header=csv_headers)
+    idot_wl.to_csv(csv_output, index=False, header=csv_headers)
     
     # Add headers to both files
-    add_headers(excel_output, csv_output, worklist_name, user)
+    add_headers(excel_output, csv_output, **header_config)
     
     return f"Worklist generated: {os.path.basename(excel_output)} and {os.path.basename(csv_output)}"
 
