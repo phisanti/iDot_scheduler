@@ -1,4 +1,5 @@
 import gradio as gr
+import os
 from .utils import process_file, generate_worklist, read_instructions
 
 
@@ -12,7 +13,7 @@ def iDotScheduler():
 
                 with gr.Row():
                     input_file = gr.File(label="Input Excel File")
-                    output_folder = gr.Textbox(label="Output Folder")
+                    output_folder = gr.Textbox(label="Output Folder", value=os.getcwd())
                 
                 with gr.Row():
                     worklist_name = gr.Textbox(label="Worklist Name", value="iDot Worklist")
