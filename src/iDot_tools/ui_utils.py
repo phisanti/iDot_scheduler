@@ -1,10 +1,22 @@
 import pandas as pd
-import numpy as np
 import random
-from typing import Dict, Any
+from typing import Tuple
+from pathlib import Path
+
+# Local Imports
+from .utils import read_excel_sheets
+
 
 def generate_distinct_colors(n: int) -> list:
-    """Generate visually distinct colors using HSV color space."""
+    """
+    Generate visually distinct colors using HSV color space.
+    
+    Args:
+        n (int): Number of distinct colors to generate
+        
+    Returns:
+        list: List of hex color codes
+    """
     colors = []
     for i in range(n):
         hue = i / n
@@ -34,7 +46,18 @@ def generate_distinct_colors(n: int) -> list:
     return colors
 
 def is_dark_color(hex_color):
-    """Determine if a color is dark based on its RGB values."""
+    """
+    Determine if a color is dark based on its RGB values.
+    
+    Args:
+        hex_color (str): Hex color code (with or without # prefix)
+        
+    Returns:
+        bool: True if color is dark, False if light
+        
+    Raises:
+        ValueError: If hex_color is invalid format
+    """
     # Remove '#' if present
     hex_color = hex_color.lstrip('#')
     # Convert hex to RGB
@@ -45,70 +68,135 @@ def is_dark_color(hex_color):
     luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     return luminance < 0.5
 
-def style_ids(val, item2col):
-    """Style function for ID dataframes."""
-    if pd.notna(val) and val in item2col:
-        bg_color = item2col[val]
+
+def style_cell(val, color_map: dict, style_type: str = 'id', ref_id: str = None) -> str:
+    """
+    Style cells based on type and color mapping.
+    
+    Args:
+        val: Cell value to style
+        color_map (dict): Dictionary mapping IDs to colors
+        style_type (str): 'id' or 'volume' to determine styling logic
+        ref_id (str, optional): Reference ID for volume styling
+        
+    Returns:
+        str: CSS styling string
+    """
+    if style_type == 'volume':
+        check_val = ref_id
+    else:
+        check_val = val
+        
+    if pd.notna(val) and pd.notna(check_val) and check_val in color_map:
+        bg_color = color_map[check_val]
         text_color = '#ffffff' if is_dark_color(bg_color) else '#000000'
-        return f'background-color: {bg_color}; color: {text_color}'
+        opacity = 'opacity: 0.95;' if style_type == 'volume' else ''
+        return f'background-color: {bg_color}; {opacity} color: {text_color}'
     return ''
 
-def style_vol(val, id_df, item2col):
-    """Style function for volume dataframes based on corresponding ID dataframe."""
-    if pd.notna(val) and pd.notna(id_df) and id_df in item2col:
-        bg_color = item2col[id_df]
-        text_color = '#ffffff' if is_dark_color(bg_color) else '#000000'
-        return f'background-color: {bg_color}; opacity: 0.95; color: {text_color}'
-    return ''
 
-def style_dataframe(data_dict: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
-    """Style dataframes with color coding based on IDs and volumes."""
-    source_df = data_dict['source_id']
-    source_items = pd.unique(source_df.iloc[:, 1:].values.ravel())
-    items = [x for x in source_items if pd.notna(x)]
+def create_color_mapping(source_df: pd.DataFrame) -> dict:
+    """
+    Create color mapping for unique items in source dataframe.
     
-    colors = generate_distinct_colors(len(items))
-    item2col = dict(zip(items, colors))
+    Args:
+        source_df (pd.DataFrame): Source ID dataframe
+        
+    Returns:
+        dict: Mapping of unique items to color codes
+    """
+    unique_items = pd.unique(source_df.iloc[:, 1:].values.ravel())
+    valid_items = [x for x in unique_items if pd.notna(x)]
+    colors = generate_distinct_colors(len(valid_items))
+    return dict(zip(valid_items, colors))
+
+
+def create_legend(color_map: dict) -> pd.DataFrame.style:
+    """
+    Create a styled legend dataframe.
     
-    styled_source_id = data_dict['source_id'].style.apply(
-        lambda x: pd.Series([''] + [style_ids(v, item2col) for v in x[1:]], index=x.index),
-        axis=1
-    ).hide(axis='index')
-    
-    styled_target_id = data_dict['target_id'].style.apply(
-        lambda x: pd.Series([''] + [style_ids(v, item2col) for v in x[1:]], index=x.index),
-        axis=1
-    ).hide(axis='index')
-    
-    styled_source_vol = data_dict['source_vol'].style.apply(
-        lambda x: pd.Series(
-            [''] + [style_vol(v, data_dict['source_id'].iloc[x.name, i+1], item2col) 
-                   for i, v in enumerate(x[1:])],
-            index=x.index
-        ),
-        axis=1
-    ).hide(axis='index')
-    
-    styled_target_vol = data_dict['target_vol'].style.apply(
-        lambda x: pd.Series(
-            [''] + [style_vol(v, data_dict['target_id'].iloc[x.name, i+1], item2col)
-                   for i, v in enumerate(x[1:])],
-            index=x.index
-        ),
-        axis=1
-    ).hide(axis='index')
-    
-    legend_df = pd.DataFrame([item2col.keys()], columns=item2col.keys())
-    legend_df = legend_df.style.apply(
-        lambda x: pd.Series([style_ids(v, item2col) for v in x], index=x.index),
+    Args:
+        color_map (dict): Mapping of items to colors
+        
+    Returns:
+        pd.DataFrame.style: Styled legend dataframe
+    """
+    legend_df = pd.DataFrame([color_map.keys()], columns=color_map.keys())
+    return legend_df.style.apply(
+        lambda x: pd.Series([style_cell(v, color_map, 'id') for v in x], index=x.index),
         axis=1
     ).hide(axis='index').hide(axis='columns')
 
-    return {
-        'source_id': styled_source_id,
-        'source_vol': styled_source_vol,
-        'target_id': styled_target_id,
-        'target_vol': styled_target_vol,
-        'legend': legend_df,
-        'color_mapping': item2col
-    }
+
+def create_styled_table(df: pd.DataFrame, color_map: dict, is_volume: bool = False, ref_df: pd.DataFrame = None) -> pd.DataFrame.style:
+    """
+    Create a styled table with consistent formatting.
+    
+    Args:
+        df (pd.DataFrame): Data to style
+        color_map (dict): Color mapping for styling
+        is_volume (bool): Whether table contains volumes
+        ref_df (pd.DataFrame, optional): Reference dataframe for volume styling
+        
+    Returns:
+        pd.DataFrame.style: Styled dataframe
+    """
+    style_type = 'volume' if is_volume else 'id'
+    
+    
+    # Replace NaN and 0 volumes with empty string to make better visualisation
+    styled_df = df.copy()
+    if is_volume:
+        styled_df = styled_df.replace({0: '', 0.0: '', 0.000: ''})
+    styled_df = styled_df.fillna('')
+
+    return styled_df.style.apply(
+        lambda x: pd.Series(
+            [''] + [style_cell(v, color_map, style_type, 
+                             ref_df.iloc[x.name, i+1] if ref_df is not None else None) 
+                   for i, v in enumerate(x[1:])],
+            index=x.index
+        ),
+        axis=1
+    ).hide(axis='index')
+
+def visualise_input_data(file_path: Path) -> Tuple[str, str, str, str, str]:
+    """
+    Process Excel file and return HTML representations.
+    
+    Args:
+        file_path (Path): Path to Excel file
+        
+    Returns:
+        Tuple[str, str, str, str, str]: HTML strings for source_id, source_vol,
+            target_id, target_vol tables and legend
+            
+    Raises:
+        FileNotFoundError: If file does not exist
+        pd.errors.EmptyDataError: If file contains no data
+        ValueError: If data format is invalid
+    """
+    try:
+        dataframes = read_excel_sheets(file_path)
+        color_map = create_color_mapping(dataframes['source_id'])
+        
+        styled_tables = {
+            'source_id': create_styled_table(dataframes['source_id'], color_map),
+            'target_id': create_styled_table(dataframes['target_id'], color_map),
+            'source_vol': create_styled_table(dataframes['source_vol'], color_map, True, dataframes['source_id']),
+            'target_vol': create_styled_table(dataframes['target_vol'], color_map, True, dataframes['target_id'])
+        }
+        
+        legend = create_legend(color_map)
+        
+        return (
+            styled_tables['source_id'].to_html(),
+            styled_tables['source_vol'].to_html(),
+            styled_tables['target_id'].to_html(),
+            styled_tables['target_vol'].to_html(),
+            legend.to_html()
+        )
+    except FileNotFoundError:
+        raise ValueError("Excel file not found")
+    except pd.errors.EmptyDataError:
+        raise ValueError("Excel file is empty")

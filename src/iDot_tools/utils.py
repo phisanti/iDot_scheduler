@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 import logging
 from pathlib import Path
-from .ui_utils import style_dataframe
+#from .ui_utils import style_dataframe
 from .constants import ROWDICT as DEFAULT_ROWDICT
 from pkg_resources import resource_string
 
@@ -227,37 +227,37 @@ def add_headers(
         modified.write(content)
 
 
-def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]:
-    """
-    Process input file and generate HTML representations.
-    
-    Args:
-        file_obj (Path): Path to input Excel file
-        
-    Returns:
-        Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]: 
-            HTML strings for source_id, source_vol, target_id, target_vol tables and status message
-    """
-    if not file_obj:
-        return None, None, None, None, "Please provide both folder and file"
-    
-    file_path = file_obj
-    try:
-
-
-        dataframes = read_excel_sheets(file_path)
-        styled_dfs=style_dataframe(data_dict=dataframes)
-
-        return (
-            styled_dfs['source_id'].to_html(),
-            styled_dfs['source_vol'].to_html(),
-            styled_dfs['target_id'].to_html(),
-            styled_dfs['target_vol'].to_html(),
-            styled_dfs['legend'].to_html()
-
-        )
-    except Exception as e:
-        return None, None, None, None, f"Error: {str(e)}"
+# def process_file(file_obj: Path) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]:
+#     """
+#     Process input file and generate HTML representations.
+#     
+#     Args:
+#         file_obj (Path): Path to input Excel file
+#         
+#     Returns:
+#         Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]: 
+#             HTML strings for source_id, source_vol, target_id, target_vol tables and status message
+#     """
+#     if not file_obj:
+#         return None, None, None, None, "Please provide both folder and file"
+#     
+#     file_path = file_obj
+#     try:
+# 
+# 
+#         dataframes = read_excel_sheets(file_path)
+#         styled_dfs=style_dataframe(data_dict=dataframes)
+# 
+#         return (
+#             styled_dfs['source_id'].to_html(),
+#             styled_dfs['source_vol'].to_html(),
+#             styled_dfs['target_id'].to_html(),
+#             styled_dfs['target_vol'].to_html(),
+#             styled_dfs['legend'].to_html()
+# 
+#         )
+#     except Exception as e:
+#         return None, None, None, None, f"Error: {str(e)}"
 
 def generate_worklist(input_file: Path, output_folder: Path, plate_size: int = 1536, clean_labels: bool = False, header_config: dict = None) -> str:
 

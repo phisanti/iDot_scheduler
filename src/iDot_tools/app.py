@@ -1,6 +1,7 @@
 import gradio as gr
 import os
-from .utils import process_file, generate_worklist, read_instructions
+from .utils import generate_worklist, read_instructions
+from .ui_utils import visualise_input_data
 
 
 def iDotScheduler():
@@ -54,7 +55,7 @@ def iDotScheduler():
                         
                 
                 read_btn.click(
-                    process_file,
+                    visualise_input_data,
                     inputs=[input_file],
                     outputs=[table1, table2, table3, table4, legend]
                 )
