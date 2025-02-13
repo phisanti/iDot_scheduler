@@ -317,14 +317,31 @@ def add_headers(
     
     # Ensure 8 columns for each header row
     headers = [
-        [worklist_name, '1.10.1.178', user, current_time.strftime("%d.%m.%Y"), 
-         current_time.strftime("%H:%M"), '', '', ''],
-        [source_plate_type, source_name, target_type, target_name, 'Waste Tube', '', '', ''],
-        [f'DispenseToWaste={str(dispense_to_waste)}', 'DispenseToWasteCycles=3',
-         'DispenseToWasteVolume=1e-7', f'UseDeionisation={str(deionisation)}',
-         f'OptimizationLevel={optimization}', 'WasteErrorHandlingLevel=Ask',
-         'SaveLiquids=Ask', '']
-    ]
+            [worklist_name,                     # A1
+            '1.10.1.178',                       # B1
+            user,                               # C1
+            current_time.strftime("%d.%m.%Y"),  # D1
+            current_time.strftime("%H:%M"),     # E1
+            '',                                 # F1
+            '',                                 # G1
+            ''],                                # H1
+            [source_plate_type,                 # A2
+            source_name,                        # B2
+            '',                                 # C2
+            '',                                 # D2
+            target_type,                        # E2
+            target_name,                        # F2
+            '',                                 # G2
+            'Waste Tube'],                      # H2
+            ['DispenseToWaste=' + str(dispense_to_waste),   # A3
+            'DispenseToWasteCycles=3',                      # B3
+            'DispenseToWasteVolume=5e-8',                   # C3
+            'UseDeionisation=' + str(deionisation),         # D3
+            'OptimizationLevel=' + optimization,            # E3
+            'WasteErrorHandlingLevel=Ask',                  # F3
+            'SaveLiquids=Ask',                              # G3
+            '']                                             # H3
+        ]
 
     # Update Excel
     df = pd.read_excel(excel_path)

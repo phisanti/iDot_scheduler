@@ -41,28 +41,34 @@ def iDotScheduler():
                                 label="Source Plate Name", 
                                 value="Source Plate 1"
                             )
-                            target_type = gr.Textbox(
-                                label="Target Type", 
-                                value="1536_Screenstar"
+                            target_type = gr.Dropdown(
+                                choices=["MWP 96", "MWP 384", "1536_Screenstar"], 
+                                value="MWP 96",
+                                label="Target Type",
+                                info="Target plate type"
                             )
                             target_name = gr.Textbox(
                                 label="Target Name", 
-                                value="Target Plate 1"
+                                value="Target Plate 1",
+                                info="Name of the target plate"    
                             )
 
                         with gr.Row():
                             dispense_waste = gr.Checkbox(
                                 label="Dispense to Waste", 
-                                value=True
+                                value=True,
+                                info="Enable/disable priming before dispensing"
                             )
                             deionisation = gr.Checkbox(
                                 label="Use Deionisation", 
-                                value=True
+                                value=True,
+                                info="Enable/disable deionization of source and target plates (Should always be True)"
                             )
                             optimization = gr.Dropdown(
-                                choices=["ReorderAndParallel", "None"], 
+                                choices=["NoOptimization", "Reorder", "ReorderAndParallel"],
                                 value="ReorderAndParallel", 
-                                label="Optimization"
+                                label="Optimization Level",
+                                info="Protocol optimization to reduce total dispensing time"
                             )
 
                 with gr.Row():
