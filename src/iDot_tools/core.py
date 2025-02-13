@@ -11,9 +11,19 @@ from .constants import ParallelisationType
 
 # Set up logger
 logger = logging.getLogger('iDot_tools')
-def setup_logging(output_folder: Path, base_name: str) -> None:
+def setup_logging(output_folder: Path, base_name: str, debug_mode: bool = False) -> None:
+    """
+    Configure logging for iDot tools with file output.
+
+    Args:
+        output_folder (Path): Directory where log file will be saved
+        base_name (str): Base name for the log file
+
+    Returns:
+        None
+    """
     global logger
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
     output_folder = Path(output_folder)
     log_file = output_folder / f"idot_worklist_{base_name}.log"
     fh = logging.FileHandler(log_file)
@@ -56,15 +66,62 @@ def validate_volumes(source_wells_df: pd.DataFrame, volume: float, liquid_name: 
     return valid_wells['Well']
 
 
+def create_worklist_entry(source_well: str, 
+                         target_well: str, 
+                         transfer_vol: float, 
+                         liquid_name: str) -> dict:
+    """
+    Create a single worklist entry.
+
+    Args:
+        source_well (str): Source well identifier
+        target_well (str): Target well identifier
+        transfer_vol (float): Volume to transfer
+        liquid_name (str): Name of liquid being transferred
+
+    Returns:
+        dict: Worklist entry dictionary
+    """
+    return {
+        'Source Well': source_well,
+        'Target Well': target_well,
+        'Volume [uL]': transfer_vol,
+        'Liquid Name': liquid_name,
+        'Additional Volume Per Source Well': 0
+    }
+
+
 def update_source_volume(data_dict: Dict[str, pd.DataFrame], 
                         source_well: str, 
                         transfer_vol: float) -> None:
+    """
+    Update the volume in source well after a transfer.
+
+    Args:
+        data_dict (Dict[str, pd.DataFrame]): Data dictionary containing source information
+        source_well (str): Well identifier to update
+        transfer_vol (float): Volume to subtract from source well
+
+    Returns:
+        None
+    """
     data_dict['source'].loc[data_dict['source']['Well'] == source_well, 'vol'] -= transfer_vol
 
 
 def process_sequential_transfers(data_dict: Dict[str, pd.DataFrame], 
                                remaining_targets: pd.DataFrame,
                                dead_vol: float) -> list:
+    """
+    Process liquid transfers sequentially.
+
+    Args:
+        data_dict (Dict[str, pd.DataFrame]): Data dictionary containing source and target information
+        remaining_targets (pd.DataFrame): DataFrame of remaining target wells to process
+        dead_vol (float): Dead volume requirement
+
+    Returns:
+        list: List of worklist entries for sequential transfers
+    """
     worklist_entries = []
     
     for _, row in remaining_targets.iterrows():
@@ -84,12 +141,28 @@ def process_sequential_transfers(data_dict: Dict[str, pd.DataFrame],
 
 
 def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
+    """
+    Finds optimal matching sequences between source and target wells for parallel transfers.
+    
+    Process:
+    1. Scans source plate columns using sliding windows
+    2. Matches source wells with target sequence based on liquid type and volume
+    3. Returns best matching sequence with maximum consecutive matches
+    
+    Args:
+        source_df (pd.DataFrame): Source plate data with Well, Value, and vol columns
+        target_sequence (list): Target liquid types to match
+        target_vols (list): Required volumes for each target
+        dead_vol (float): Minimum required dead volume
+        
+    Returns:
+        tuple: (matching_wells, match_mask) - Wells that match and boolean mask of matches
+    """
     sequences = {}
     dead_vol = [dead_vol] * len(target_sequence)
     logger.debug(f"Starting sequence search with target: {target_sequence}, vols: {target_vols}, dead_vol: {dead_vol}")
 
     for col in source_df['Column'].unique():
-        logger.debug(f"Processing column {col}")
         source_data = source_df[source_df['Column'] == col]
         col_matches = []
 
@@ -109,13 +182,7 @@ def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
                              (id_window['vol'].values >= sub_dead_vol)
 
                 match_count = sum(match_mask)
-                logger.debug(f"Wells in window: {id_window['Value'].values}")
-                logger.debug(f"Value matches: {id_window['Value'].values == sub_target}, vol matches: {id_window['vol'].values >= sub_vols}, dead vol matches: {id_window['vol'].values >= sub_dead_vol}")
-                logger.debug(f"Window match count: {match_count}, match pattern: {match_mask.tolist()}")
-
                 filtered_wells = [w for w, m in zip(wells, match_mask) if m]
-                filtered_target = [t for t, m in zip(sub_target, match_mask) if m]
-                logger.debug(f"Filtered wells: {filtered_wells}, filtered target: {filtered_target}")
 
                 col_matches.append({
                     'wells': filtered_wells,
@@ -150,6 +217,17 @@ def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
 
 
 def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], remaining_targets: pd.DataFrame, dead_vol: float) -> Tuple[list, set]:
+    """
+    Process liquid transfers in parallel mode.
+
+    Args:
+        data_dict (Dict[str, pd.DataFrame]): Data dictionary containing source and target information
+        remaining_targets (pd.DataFrame): DataFrame of remaining target wells to process
+        dead_vol (float): Dead volume requirement
+
+    Returns:
+        Tuple[list, set]: Tuple containing worklist entries and set of processed wells
+    """
     logger.info("Starting parallel transfer processing")
     logger.info(f"Initial target wells count: {len(data_dict['target'])}")
 
@@ -158,8 +236,6 @@ def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], remaining_tar
     
     max_parallel_channels = data_dict['target']['parallel_channel']
     unique_cols = data_dict['target']['Column'].unique()
-    # Filter data_dict['target'] by remaining_targets:
-
     for channel_i in range(1, max_parallel_channels.max() + 1):
         logger.debug(f"Processing channel {channel_i}")
         for col_i in unique_cols:
@@ -198,18 +274,6 @@ def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], remaining_tar
 
     logger.info(f"Completed parallel transfers: {len(worklist_entries)}")
     return worklist_entries, processed_wells
-
-def create_worklist_entry(source_well: str, 
-                         target_well: str, 
-                         transfer_vol: float, 
-                         liquid_name: str) -> dict:
-    return {
-        'Source Well': source_well,
-        'Target Well': target_well,
-        'Volume [uL]': transfer_vol,
-        'Liquid Name': liquid_name,
-        'Additional Volume Per Source Well': 0
-    }
 
 
 def create_iDot_worklist(
@@ -353,6 +417,7 @@ def generate_worklist(
     output_folder: Path, 
     plate_size: int = '1536', 
     parallelisation: ParallelisationType = ParallelisationType.IMPLICIT,
+    debug_mode: bool = False,
     header_config: dict = None
 ) -> str:
     """
@@ -366,6 +431,7 @@ def generate_worklist(
             - "implicit": Uses parallel + sequential transfers (default)
             - "explicit": Uses sequential transfers + clean labels
             - "none": Uses only sequential transfers
+        debug_mode (bool): Enable debug logging
         header_config (dict): Dictionary containing header configuration parameters
         
     Returns:
@@ -375,8 +441,14 @@ def generate_worklist(
         ValueError: If plate_size is not 96, 384 or 1536 or invalid parallelisation type
     """
     # Setup logger
-    setup_logging(output_folder, Path(input_file.name).stem)
+    setup_logging(output_folder, Path(input_file.name).stem, debug_mode)
+    # Log all the inputs and configuration by the user
     logger.info(f"Starting worklist generation for {input_file}")
+    logger.info(f"Output folder: {output_folder}")
+    logger.info(f"Plate size: {plate_size}")
+    logger.info(f"Parallelisation: {parallelisation}")
+    logger.info(f"Debug mode: {debug_mode}")
+    logger.info(f"Header config: {header_config}")
     logger.info(f"Configuration - Plate size: {plate_size}, Parallelisation: {parallelisation}")
 
     # Input validation
@@ -408,7 +480,6 @@ def generate_worklist(
         for sheet_name, df in dataframes.items()
     }
     data_dict = simplify_input_data(melted_dataframes, plate_size)
-    logger.debug(f"Data shapes - Source: {data_dict['source'].shape}, Target: {data_dict['target'].shape}")
 
     # Generate worklist based on parallelisation strategy
     if parallelisation == ParallelisationType.IMPLICIT:

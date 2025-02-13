@@ -69,6 +69,11 @@ def iDotScheduler():
                                 label="Optimization Level",
                                 info="Protocol optimization to reduce total dispensing time"
                             )
+                            debug_mode = gr.Checkbox(
+                                label="Debug Mode", 
+                                value=False,
+                                info="Enable detailed logging"
+                            )
 
                 with gr.Row():
                     read_btn = gr.Button("Read Files")
@@ -105,7 +110,7 @@ def iDotScheduler():
                         inputs[1],                       # output_folder
                         inputs[2],                       # plate_size
                         ParallelisationType(inputs[3]),  # parallelisation
-
+                        inputs[13],                      # debug_mode (new)
                         {
                             'worklist_name': inputs[4],
                             'user': inputs[5],
@@ -121,7 +126,7 @@ def iDotScheduler():
                     inputs=[
                         input_file, output_folder, plate_size, parallelisation, worklist_name, user,
                         source_plate_type, source_name, target_type, target_name,
-                        dispense_waste, deionisation, optimization
+                        dispense_waste, deionisation, optimization, debug_mode
                     ],
                     outputs=[output_msg, idot_wl]
                 )
