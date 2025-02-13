@@ -83,41 +83,6 @@ def process_sequential_transfers(data_dict: Dict[str, pd.DataFrame],
     return worklist_entries
 
 
-def find_matching_sequence_v0(source_df, target_sequence, target_vols, dead_vol=1):
-    sequences = {}
-    dead_vol = [dead_vol] * len(target_sequence)
-    logger.debug(f"Finding matches for sequence of length {len(target_sequence)}")
-
-    for col in source_df['Column'].unique():
-        source_data = source_df[source_df['Column'] == col]
-        col_matches = []  # Store matches for each window in this column
-        
-        for i in range(len(source_data) - len(target_sequence) + 1):
-            id_window = source_data.iloc[i:i+len(target_sequence)]
-            wells = id_window['Well'].tolist()
-            
-            match_count = sum((id_window['Value'] == target_sequence) & 
-                            (id_window['vol'] >= target_vols) & 
-                            (id_window['vol'] >= dead_vol))
-            col_matches.append({'wells': wells, 'matches': match_count})
-            logger.debug(f'Wells in window: {id_window['Value']}')
-            logger.debug(f"Value matches: {(id_window['Value'] == target_sequence)}, vol matches: {(id_window['vol'] >= target_vols)}, dead vol matches: {(id_window['vol'] >= dead_vol)}")
-            logger.debug(f"Column {col}, Window {i}: {match_count} matches")
-
-        
-        if col_matches:  # If we found any matches in this column
-            # Store the window with maximum matches for this column
-            best_window = max(col_matches, key=lambda x: x['matches'])
-            sequences[col] = best_window
-
-    if sequences:
-        # Find column with highest matches (first one in case of tie)
-        best_col = max(sequences.items(), key=lambda x: x[1]['matches'])[0]
-        if sequences[best_col]['matches'] > 0:
-            return sequences[best_col]['wells']
-    return [], target_sequence
-
-
 def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
     sequences = {}
     dead_vol = [dead_vol] * len(target_sequence)
