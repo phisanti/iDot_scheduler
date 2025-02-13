@@ -29,30 +29,29 @@ def iDotScheduler():
                         label="Parallelisation Strategy"
                     )
                 with gr.Row():
+                    source_plate_type = gr.Dropdown(
+                        choices=["S.100 Plate", "S.200 Plate"], 
+                        value="S.200 Plate", 
+                        label="Source Plate Type"
+                    )
+                    source_name = gr.Textbox(
+                        label="Source Plate Name", 
+                        value="Source Plate 1"
+                    )
+                    target_type = gr.Dropdown(
+                        choices=["MWP 96", "MWP 384", "1536_Screenstar"], 
+                        value="MWP 96",
+                        label="Target Type",
+                        info="Target plate type"
+                    )
+                    target_name = gr.Textbox(
+                        label="Target Name", 
+                        value="Target Plate 1",
+                        info="Name of the target plate"    
+                    )
+                with gr.Row():
                     advanced_settings = gr.Accordion("Advanced Settings", open=False)
                     with advanced_settings:
-                        with gr.Row():
-                            source_plate_type = gr.Dropdown(
-                                choices=["S.100 Plate", "S.200 Plate"], 
-                                value="S.200 Plate", 
-                                label="Source Plate Type"
-                            )
-                            source_name = gr.Textbox(
-                                label="Source Plate Name", 
-                                value="Source Plate 1"
-                            )
-                            target_type = gr.Dropdown(
-                                choices=["MWP 96", "MWP 384", "1536_Screenstar"], 
-                                value="MWP 96",
-                                label="Target Type",
-                                info="Target plate type"
-                            )
-                            target_name = gr.Textbox(
-                                label="Target Name", 
-                                value="Target Plate 1",
-                                info="Name of the target plate"    
-                            )
-
                         with gr.Row():
                             dispense_waste = gr.Checkbox(
                                 label="Dispense to Waste", 

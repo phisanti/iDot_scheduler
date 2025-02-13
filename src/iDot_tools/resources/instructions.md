@@ -10,12 +10,18 @@
   4. **target_vol**
 
 ## Data Format
-
-- First row must be **header row** with numbers 1-n (depending on the plate type).
+- First row must be just a label with the sheet type (source_id, source_vol, target_id, or target_vol)
+- Second row must be **header row** with numbers 1-n (depending on the plate type).
 - First column must be labeled **Row**
 - Values must be **numeric** in volume sheets
 - All IDs must match between source and target sheets. 
 
+## Parallelisation Options
+
+- **Implicit**: Uses both parallel and sequential transfers (default)
+- **Explicit**: Uses sequential transfers with cleaned labels (removes "-N" suffixes, e.g. "sample-1" → "sample") 
+- **None**: Uses only sequential transfers
+- 
 ## Common Errors
 
 - Missing or misnamed sheets
