@@ -87,35 +87,43 @@ def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
     sequences = {}
     dead_vol = [dead_vol] * len(target_sequence)
     logger.debug(f"Starting sequence search with target: {target_sequence}, vols: {target_vols}, dead_vol: {dead_vol}")
-    
+
     for col in source_df['Column'].unique():
         logger.debug(f"Processing column {col}")
         source_data = source_df[source_df['Column'] == col]
         col_matches = []
-        
-        for i in range(len(source_data) - len(target_sequence) + 1):
-            logger.debug(f"Checking window at position {i} in column {col}")
-            id_window = source_data.iloc[i:i+len(target_sequence)]
-            wells = id_window['Well'].tolist()
-            
-            match_mask = (id_window['Value'] == target_sequence) & \
-                        (id_window['vol'] >= target_vols) & \
-                        (id_window['vol'] >= dead_vol)
-            
-            match_count = sum(match_mask)
-            logger.debug(f'Wells in window: {id_window['Value']}')
-            logger.debug(f"Value matches: {(id_window['Value'] == target_sequence)}, vol matches: {(id_window['vol'] >= target_vols)}, dead vol matches: {(id_window['vol'] >= dead_vol)}")
-            logger.debug(f"Window match count: {match_count}, match pattern: {match_mask.tolist()}")
 
-            filtered_wells = [w for w, m in zip(wells, match_mask) if m]
-            filtered_target = [t for t, m in zip(target_sequence, match_mask) if m]
-            logger.debug(f"Filtered wells: {filtered_wells}, filtered target: {filtered_target}")
-            
-            col_matches.append({
-                'wells': filtered_wells,
-                'matches': match_count,
-                'match_mask' : match_mask.tolist()
-            })
+        window_size = min(len(source_data), len(target_sequence))
+        for s_i in range(len(source_data) - window_size + 1):
+            for t_i in range(len(target_sequence) - window_size + 1):
+                logger.debug(f"Checking window in column {col} at source index {s_i} and target index {t_i}")
+                id_window = source_data.iloc[s_i:s_i+window_size]
+                wells = id_window['Well'].tolist()
+
+                sub_target = target_sequence[t_i:t_i+window_size]
+                sub_vols = target_vols[t_i:t_i+window_size]
+                sub_dead_vol = dead_vol[t_i:t_i+window_size]
+
+                match_mask = (id_window['Value'].values == sub_target) & \
+                             (id_window['vol'].values >= sub_vols) & \
+                             (id_window['vol'].values >= sub_dead_vol)
+
+                match_count = sum(match_mask)
+                logger.debug(f"Wells in window: {id_window['Value'].values}")
+                logger.debug(f"Value matches: {id_window['Value'].values == sub_target}, vol matches: {id_window['vol'].values >= sub_vols}, dead vol matches: {id_window['vol'].values >= sub_dead_vol}")
+                logger.debug(f"Window match count: {match_count}, match pattern: {match_mask.tolist()}")
+
+                filtered_wells = [w for w, m in zip(wells, match_mask) if m]
+                filtered_target = [t for t, m in zip(sub_target, match_mask) if m]
+                logger.debug(f"Filtered wells: {filtered_wells}, filtered target: {filtered_target}")
+
+                col_matches.append({
+                    'wells': filtered_wells,
+                    'matches': match_count,
+                    'match_mask': match_mask.tolist(),
+                    't_i': t_i
+
+                })
         
         if col_matches:
             best_window = max(col_matches, key=lambda x: x['matches'])
@@ -126,12 +134,22 @@ def find_matching_sequence(source_df, target_sequence, target_vols, dead_vol=1):
         best_col = max(sequences.items(), key=lambda x: x[1]['matches'])[0]
         logger.debug(f"Selected best column {best_col} with {sequences[best_col]['matches']} matches")
         if sequences[best_col]['matches'] > 0:
-            return sequences[best_col]['wells'], sequences[best_col]['match_mask']
-    
+            # Only fill the mask for the final best match
+            final_mask = [False] * len(target_sequence)
+            best_t_i = sequences[best_col]['t_i']
+            best_match_mask = sequences[best_col]['match_mask']
+
+            # Insert the best match into the final mask
+            for idx, val in enumerate(best_match_mask):
+                final_mask[best_t_i + idx] = bool(val)
+
+            return sequences[best_col]['wells'], final_mask
+
     logger.debug("No matches found, returning empty lists")
     return [], []
 
-def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], dead_vol: float) -> Tuple[list, set]:
+
+def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], remaining_targets: pd.DataFrame, dead_vol: float) -> Tuple[list, set]:
     logger.info("Starting parallel transfer processing")
     logger.info(f"Initial target wells count: {len(data_dict['target'])}")
 
@@ -140,13 +158,14 @@ def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], dead_vol: flo
     
     max_parallel_channels = data_dict['target']['parallel_channel']
     unique_cols = data_dict['target']['Column'].unique()
-    
+    # Filter data_dict['target'] by remaining_targets:
+
     for channel_i in range(1, max_parallel_channels.max() + 1):
         logger.debug(f"Processing channel {channel_i}")
         for col_i in unique_cols:
-            target_subset = data_dict['target'].loc[
-                (data_dict['target']['Column'] == col_i) &
-                (data_dict['target']['parallel_channel'] == channel_i)
+            target_subset = remaining_targets.loc[
+                (remaining_targets['Column'] == col_i) &
+                (remaining_targets['parallel_channel'] == channel_i)
             ]
 
             if len(target_subset) == 0:
@@ -214,24 +233,29 @@ def create_iDot_worklist(
     logger.info("=== Creating Worklist ===")
     logger.debug(f"Initial data keys: {data_dict.keys()}")
     worklist_entries = []
-    processed_wells = set()
-
+    all_processed_wells = set()
+    parallel_pass_counter = 0
     if use_parallel:
         # First pass - parallel channels
-        logger.debug(f"Target data:\n{data_dict['target']}")
-        logger.debug(f"Initial worklist entries count: {len(worklist_entries)}")
-        logger.info(f"Unique parallel channels: {data_dict['target']['parallel_channel'].unique()}")
-
-        worklist_entries, processed_wells = process_parallel_transfers(data_dict, dead_vol)
-        parallel_df = pd.DataFrame(worklist_entries)
-        if not parallel_df.empty:
-            parallel_dupes = parallel_df[parallel_df['Target Well'].duplicated(keep=False)]
-            if not parallel_dupes.empty:
-                logger.warning("Duplicates found after parallel processing:")
-                logger.warning(f"Duplicate wells:\n{parallel_dupes[['Source Well', 'Target Well', 'parallel_channel']]}")
+        remaining_targets = data_dict['target']
+        while True:
+            logger.info(f"Starting parallel pass {parallel_pass_counter}")
+            logger.debug(f"Target data:\n{data_dict['target']}")
+            logger.debug(f"Initial worklist entries count: {len(worklist_entries)}")
+            logger.info(f"Unique parallel channels: {data_dict['target']['parallel_channel'].unique()}")
+            parallel_pass_counter += 1
+            new_worklist_entries, new_processed_wells =  process_parallel_transfers(data_dict, remaining_targets, dead_vol)
+            
+            all_processed_wells |= new_processed_wells
+            worklist_entries.extend(new_worklist_entries)
+            
+            remaining_targets = data_dict['target'][~data_dict['target']['Target Well'].isin(all_processed_wells)]
+            if not new_processed_wells:
+                # No new wells processed, stop parallel cycle
+                break
    
     # Process remaining/all wells sequentially
-    remaining_targets = data_dict['target'][~data_dict['target']['Target Well'].isin(processed_wells)]
+    remaining_targets = data_dict['target'][~data_dict['target']['Target Well'].isin(all_processed_wells)]
     sequential_entries = process_sequential_transfers(data_dict, remaining_targets, dead_vol)
     worklist_entries.extend(sequential_entries)
     logger.info(f"Processing remaining targets: {len(remaining_targets)}")
