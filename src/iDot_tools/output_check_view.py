@@ -2,39 +2,26 @@ import numpy as np
 import pandas as pd
 import random
 from .ui_utils import generate_distinct_colors, style_cell
+from .utils import empty_plate
 from .constants import ROWDICT
 
-def style_plate_old(plate_df):
+def style_plate(plate_df: pd.DataFrame):
+    """Style plate DataFrame with distinct colors for each unique value.
+    Args: plate_df (DataFrame) - Input plate data
+    Returns: Styled DataFrame with color formatting"""
     unique_values = plate_df.values.flatten()
     unique_values = [x for x in unique_values if pd.notna(x)]
     colors = generate_distinct_colors(len(unique_values))
     color_map = dict(zip(unique_values, colors))
     
     return plate_df.style.applymap(lambda x: style_cell(x, color_map, style_type='id'))
-def empty_plate(size, value_col_name):
-    plate_dims = {
-        '96': ('H', 12),
-        '384': ('P', 24),
-        '1536': ('ZF', 48)
-    }
-    
-    last_row, num_cols = plate_dims[size]
-    
-    if size == '1536':
-        row_labels = list(ROWDICT.keys())
-    else:
-        row_labels = [chr(i) for i in range(ord('A'), ord(last_row) + 1)]
-        
-    col_labels = list(range(1, num_cols + 1))
-    
-    empty_df = pd.DataFrame(
-        [(row, col, '') for row in row_labels for col in col_labels],
-        columns=['idot_row', 'idot_col', value_col_name]
-    )
-    return empty_df
 
 
-def plate_view(worklist, value_col='Source Well', plate_size='96'):
+
+def plate_view(worklist: pd.DataFrame, value_col: str = 'Source Well', plate_size: str = '96') -> pd.DataFrame:
+    """Transform worklist data into plate matrix format.
+    Args: worklist (DataFrame) - Input worklist, value_col (str) - Column to display, plate_size (str) - Plate dimensions
+    Returns: DataFrame in plate matrix layout"""
     # Extract row and column info
     rev_rowdict = {v: k for k, v in ROWDICT.items()}
     df = worklist.copy()
@@ -47,7 +34,7 @@ def plate_view(worklist, value_col='Source Well', plate_size='96'):
     df['idot_col'] = df['Target Well'].astype(str).str.extract('(\d+)').astype(int)
 
     # Create empty plate with all combinations
-    complete_data = empty_plate(plate_size, plate_size)
+    complete_data = empty_plate(plate_size, "")
     
     # Remove existing combinations from complete_data before merge
     merge_key = df[['idot_row', 'idot_col']].apply(tuple, axis=1)

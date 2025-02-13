@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 import logging
 from pathlib import Path
-#from .ui_utils import style_dataframe
 from .constants import ROWDICT as DEFAULT_ROWDICT
 from pkg_resources import resource_string
 
@@ -137,7 +136,6 @@ def simplify_input_data(melted_data_frames, plate_type: str = '96') -> Dict[str,
     }
     
     # Assign channel numbers to source and target plates
-    print(f'min rows: {min_rows}')
     for key, df in melted_data_frames.items():
         current_plate_type = '96' if key in ['source_id', 'source_vol'] else plate_type
         df['parallel_channel'] = df.apply(
@@ -168,6 +166,31 @@ def simplify_input_data(melted_data_frames, plate_type: str = '96') -> Dict[str,
         'target': merged_target
     }
 
+
+def empty_plate(size: str, value_col_name: str) -> pd.DataFrame:
+    """Create empty plate DataFrame with specified dimensions.
+    Args: size (str) - Plate size ('96','384','1536'), value_col_name (str) - Column name for values
+    Returns: Empty DataFrame with plate structure"""
+    plate_dims = {
+        '96': ('H', 12),
+        '384': ('P', 24),
+        '1536': ('ZF', 48)
+    }
+    
+    last_row, num_cols = plate_dims[size]
+    
+    if size == '1536':
+        row_labels = list(DEFAULT_ROWDICT.keys())
+    else:
+        row_labels = [chr(i) for i in range(ord('A'), ord(last_row) + 1)]
+        
+    col_labels = list(range(1, num_cols + 1))
+    
+    empty_df = pd.DataFrame(
+        [(row, col, '') for row in row_labels for col in col_labels],
+        columns=['idot_row', 'idot_col', value_col_name]
+    )
+    return empty_df
 
 def validate_volumes(source_wells_df: pd.DataFrame, volume: float, liquid_name: str) -> pd.Series:
     """
