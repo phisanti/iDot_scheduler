@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="iDot_scheduler",
-    version="0.6",
+    version="0.8",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
