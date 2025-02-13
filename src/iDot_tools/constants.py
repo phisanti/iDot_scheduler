@@ -1,3 +1,12 @@
+from enum import Enum
+
+# Basic configuration settings
+CONFIG = {
+    'DEAD_VOLUME': 1,
+    'MAX_SHEETS': 4,
+    'VALID_PLATE_SIZES': {96, 384, 1536}
+}
+
 
 # Dictionary to convert row id between 1536 to iDot naming:
 ROWDICT = {
@@ -34,3 +43,9 @@ ROWDICT = {
     "ZE": "Hc",
     "ZF": "Hd"
   }
+
+
+class ParallelisationType(Enum):
+    IMPLICIT = "implicit"
+    EXPLICIT = "explicit"
+    NONE = "none"

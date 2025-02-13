@@ -1,7 +1,10 @@
 import gradio as gr
 import os
-from .utils import generate_worklist, read_instructions
+from .utils import read_instructions
 from .ui_utils import visualise_input_data
+from .core import generate_worklist
+from .constants import ParallelisationType  # Add this import at the top
+from .output_check_view import visualise_plate_output
 
 
 def iDotScheduler():
@@ -20,18 +23,47 @@ def iDotScheduler():
                     worklist_name = gr.Textbox(label="Worklist Name", value="iDot Worklist")
                     user = gr.Textbox(label="User Name", value="John Doe")
                     plate_size = gr.Dropdown(choices=[96, 384, 1536], value=1536, label="Plate Size")
-                    clean_labels = gr.Checkbox(label="Clean parallel channel labels", value=False)
-
+                    parallelisation = gr.Dropdown(
+                        choices=[p.value for p in ParallelisationType], 
+                        value=ParallelisationType.IMPLICIT.value,
+                        label="Parallelisation Strategy"
+                    )
                 with gr.Row():
-                    source_plate_type = gr.Dropdown(choices=["S.100 Plate", "S.200 Plate"], value="S.200 Plate", label="Source Plate Type")
-                    source_name = gr.Textbox(label="Source Plate Name", value="Source Plate 1")
-                    target_type = gr.Textbox(label="Target Type", value="1536_Screenstar")
-                    target_name = gr.Textbox(label="Target Name", value="Target Plate 1")
+                    advanced_settings = gr.Accordion("Advanced Settings", open=False)
+                    with advanced_settings:
+                        with gr.Row():
+                            source_plate_type = gr.Dropdown(
+                                choices=["S.100 Plate", "S.200 Plate"], 
+                                value="S.200 Plate", 
+                                label="Source Plate Type"
+                            )
+                            source_name = gr.Textbox(
+                                label="Source Plate Name", 
+                                value="Source Plate 1"
+                            )
+                            target_type = gr.Textbox(
+                                label="Target Type", 
+                                value="1536_Screenstar"
+                            )
+                            target_name = gr.Textbox(
+                                label="Target Name", 
+                                value="Target Plate 1"
+                            )
 
-                with gr.Row():
-                    dispense_waste = gr.Checkbox(label="Dispense to Waste", value=True)
-                    deionisation = gr.Checkbox(label="Use Deionisation", value=True)
-                    optimization = gr.Dropdown(choices=["ReorderAndParallel", "None"], value="ReorderAndParallel", label="Optimization")
+                        with gr.Row():
+                            dispense_waste = gr.Checkbox(
+                                label="Dispense to Waste", 
+                                value=True
+                            )
+                            deionisation = gr.Checkbox(
+                                label="Use Deionisation", 
+                                value=True
+                            )
+                            optimization = gr.Dropdown(
+                                choices=["ReorderAndParallel", "None"], 
+                                value="ReorderAndParallel", 
+                                label="Optimization"
+                            )
 
                 with gr.Row():
                     read_btn = gr.Button("Read Files")
@@ -39,6 +71,7 @@ def iDotScheduler():
 
                 with gr.Row():
                     output_msg = gr.Textbox(label="Status")
+                    idot_wl = gr.State()  # Change back to State
 
                 with gr.Row():
                     legend = gr.HTML(label="Legend")
@@ -52,8 +85,10 @@ def iDotScheduler():
                         table3 = gr.HTML()
                     with gr.TabItem("Target Vol"):
                         table4 = gr.HTML()
-                        
-                
+                with gr.Tabs():
+                    with gr.TabItem("Plate Check View"):
+                        plate_view_html = gr.HTML()
+    
                 read_btn.click(
                     visualise_input_data,
                     inputs=[input_file],
@@ -61,10 +96,11 @@ def iDotScheduler():
                 )
                 generate_btn.click(
                     fn=lambda *inputs: generate_worklist(
-                        inputs[0],  # input_file
-                        inputs[1],  # output_folder
-                        inputs[2],  # plate_size
-                        inputs[3],  # plate_size
+                        inputs[0],                       # input_file
+                        inputs[1],                       # output_folder
+                        inputs[2],                       # plate_size
+                        ParallelisationType(inputs[3]),  # parallelisation
+
                         {
                             'worklist_name': inputs[4],
                             'user': inputs[5],
@@ -78,13 +114,17 @@ def iDotScheduler():
                         }
                     ),
                     inputs=[
-                        input_file, output_folder, plate_size, clean_labels, worklist_name, user,
+                        input_file, output_folder, plate_size, parallelisation, worklist_name, user,
                         source_plate_type, source_name, target_type, target_name,
                         dispense_waste, deionisation, optimization
                     ],
-                    outputs=[output_msg]
+                    outputs=[output_msg, idot_wl]
                 )
-                    
+            idot_wl.change(
+                fn=visualise_plate_output,
+                inputs=[idot_wl, plate_size],
+                outputs=[plate_view_html]
+            )
     return app
 
 if __name__ == "__main__":
