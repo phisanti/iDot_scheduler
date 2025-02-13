@@ -1,17 +1,16 @@
 import numpy as np
 import pandas as pd
 import random
-from .ui_utils import generate_distinct_colors
+from .ui_utils import generate_distinct_colors, style_cell
 from .constants import ROWDICT
 
-def style_plate(plate_df):
+def style_plate_old(plate_df):
     unique_values = plate_df.values.flatten()
     unique_values = [x for x in unique_values if pd.notna(x)]
     colors = generate_distinct_colors(len(unique_values))
-    color_map = dict(zip(unique_values, [f'background-color: {c}' for c in colors]))
+    color_map = dict(zip(unique_values, colors))
     
-    return plate_df.style.applymap(lambda x: color_map.get(x, ''))
-
+    return plate_df.style.applymap(lambda x: style_cell(x, color_map, style_type='id'))
 def empty_plate(size, value_col_name):
     plate_dims = {
         '96': ('H', 12),
@@ -41,11 +40,14 @@ def plate_view(worklist, value_col='Source Well', plate_size='96'):
     df = worklist.copy()
     
     # Extract row and column info
-    df['idot_row'] = df['Target Well'].astype(str).str.extract('([A-Za-z]+)').iloc[:,0].map(rev_rowdict)
+    if plate_size == '1536':
+        df['idot_row'] = df['Target Well'].astype(str).str.extract('([A-Za-z]+)').iloc[:,0].map(rev_rowdict)
+    else:
+        df['idot_row'] = df['Target Well'].astype(str).str.extract('([A-Za-z]+)').iloc[:,0]
     df['idot_col'] = df['Target Well'].astype(str).str.extract('(\d+)').astype(int)
 
     # Create empty plate with all combinations
-    complete_data = empty_plate(plate_size, value_col)
+    complete_data = empty_plate(plate_size, plate_size)
     
     # Remove existing combinations from complete_data before merge
     merge_key = df[['idot_row', 'idot_col']].apply(tuple, axis=1)
@@ -60,8 +62,9 @@ def plate_view(worklist, value_col='Source Well', plate_size='96'):
         columns='idot_col',
         values=value_col
     )
-    
+    plate_matrix = plate_matrix.loc[plate_matrix.index != 'idot_col']
     return plate_matrix
+
 
 
 def visualise_plate_output(worklist_df: pd.DataFrame, plate_size: int) -> tuple:
@@ -79,6 +82,7 @@ def visualise_plate_output(worklist_df: pd.DataFrame, plate_size: int) -> tuple:
         return None, None
 
     plate_matrix = plate_view(worklist_df, plate_size=str(plate_size))
+    print(plate_matrix)
     styled_plate = style_plate(plate_matrix)
     
     return (styled_plate.to_html(), )
