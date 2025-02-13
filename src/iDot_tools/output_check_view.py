@@ -69,7 +69,6 @@ def visualise_plate_output(worklist_df: pd.DataFrame, plate_size: int) -> tuple:
         return None, None
 
     plate_matrix = plate_view(worklist_df, plate_size=str(plate_size))
-    print(plate_matrix)
     styled_plate = style_plate(plate_matrix)
     
     return (styled_plate.to_html(), )
