@@ -1,11 +1,13 @@
 from setuptools import setup, find_packages
 import os
 
+
 # Read the README file for long description
 def read_readme():
     here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+    with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
         return f.read()
+
 
 setup(
     name="iDot_scheduler",
@@ -41,12 +43,7 @@ setup(
     package_data={
         "iDot_tools": ["resources/instructions.md"],
     },
-    install_requires=[
-        "gradio",
-        "pandas",
-        "numpy",
-        "openpyxl"
-    ],
+    install_requires=["gradio", "pandas", "numpy", "openpyxl"],
     entry_points={
         "console_scripts": [
             "idot-scheduler=iDot_tools.cli:main",
