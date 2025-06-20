@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 import csv
 import os
 import sys
@@ -34,6 +34,41 @@ def setup_logging(output_folder: Path, base_name: str, debug_mode: bool = False)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+
+def validate_source_volumes(data_dict: Dict[str, pd.DataFrame], dead_vol: float) -> list:
+    """
+    Validate if source volumes are sufficient for all required transfers.
+    
+    Returns:
+        list: List of error messages for insufficient volumes
+    """
+    errors = []
+    
+    # Group targets by liquid type and sum required volumes
+    target_requirements = data_dict['target'].groupby('Value')['vol'].sum().reset_index()
+    
+    for _, req in target_requirements.iterrows():
+        liquid_name = req['Value']
+        total_required = req['vol']
+        
+        # Find available source volume for this liquid
+        source_wells = data_dict['source'][data_dict['source']['Value'] == liquid_name]
+        if source_wells.empty:
+            errors.append(f"No source wells found for liquid '{liquid_name}'")
+            continue
+            
+        # Calculate usable volume (subtract dead volume from each well)
+        usable_volumes = source_wells['vol'] - dead_vol
+        total_available = usable_volumes[usable_volumes > 0].sum()
+        
+        if total_available < total_required:
+            errors.append(
+                f"Insufficient volume for '{liquid_name}': "
+                f"{total_required:.2f} μL required but only {total_available:.2f} μL available "
+                f"(after {dead_vol} μL dead volume per well)"
+            )
+    
+    return errors
 
 
 def validate_volumes(source_wells_df: pd.DataFrame, volume: float, liquid_name: str) -> pd.Series:
@@ -280,7 +315,7 @@ def process_parallel_transfers(data_dict: Dict[str, pd.DataFrame], remaining_tar
 
 def create_iDot_worklist(
     data_dict: Dict[str, pd.DataFrame], 
-    dead_vol: float = 20.,
+    dead_vol: float = 1.,
     use_parallel: bool = True,
     clean_labels: bool = False
 ) -> Tuple[pd.DataFrame, Dict[str, int]]:
@@ -421,7 +456,7 @@ def generate_worklist(
     parallelisation: ParallelisationType = ParallelisationType.IMPLICIT,
     debug_mode: bool = False,
     header_config: dict = None
-) -> str:
+) -> Tuple[str, Optional[pd.DataFrame]]:
     """
     Generate iDot worklist files from input data.
     
@@ -487,6 +522,14 @@ def generate_worklist(
     }
     data_dict = simplify_input_data(melted_dataframes, plate_size)
 
+    # Validate volumes before attempting worklist generation
+    dead_vol = CONFIG.get('DEAD_VOLUME', 1.0)
+    volume_errors = validate_source_volumes(data_dict, dead_vol)
+    
+    if volume_errors:
+        error_msg = "❌ Volume Validation Failed:\n\n" + "\n".join(f"• {error}" for error in volume_errors)
+        return error_msg, None  # Returns to existing output_msg textbox
+
     # Generate worklist based on parallelisation strategy
     if parallelisation == ParallelisationType.IMPLICIT:
         idot_wl, na_count = create_iDot_worklist(
@@ -527,4 +570,4 @@ def generate_worklist(
     # Add headers
     add_headers(excel_output, csv_output, **header_config)
     
-    return (f"Worklist generated: {os.path.basename(excel_output)} and {os.path.basename(csv_output)}", idot_wl)
+    return (f"✅ Worklist generated: {os.path.basename(excel_output)} and {os.path.basename(csv_output)}", idot_wl)
