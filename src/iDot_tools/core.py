@@ -1,6 +1,7 @@
 from typing import Dict, Tuple
 import csv
 import os
+import sys
 import logging
 import pandas as pd
 from pathlib import Path
@@ -8,6 +9,7 @@ from datetime import datetime
 from .utils import read_excel_sheets, melt_and_combine, simplify_input_data, CONFIG
 from .constants import ROWDICT as DEFAULT_ROWDICT
 from .constants import ParallelisationType
+from . import __version__
 
 # Set up logger
 logger = logging.getLogger('iDot_tools')
@@ -442,6 +444,10 @@ def generate_worklist(
     """
     # Setup logger
     setup_logging(output_folder, Path(input_file.name).stem, debug_mode)
+    
+    # Log package and system information
+    logger.info(f"Running iDot-scheduler version {__version__} on Python {sys.version.split()[0]}")
+    
     # Log all the inputs and configuration by the user
     logger.info(f"Starting worklist generation for {input_file}")
     logger.info(f"Output folder: {output_folder}")

@@ -6,7 +6,12 @@ from datetime import datetime
 import logging
 from pathlib import Path
 from .constants import ROWDICT as DEFAULT_ROWDICT
-from pkg_resources import resource_string
+try:
+    from importlib.resources import files
+except ImportError:
+    # Fallback for Python < 3.9
+    from importlib_resources import files
+
 
 # Configuration
 CONFIG = {
@@ -282,16 +287,11 @@ def add_headers(
             writer.writerow(row)
         modified.write(content)
 
-
 def read_instructions() -> str:
-    """
-    Read markdown instructions file.
+    """Read markdown instructions file.
     
     Returns:
         str: Instructions text in markdown format
     """
-    import os
-    
-    instructions = resource_string(__name__, 'resources/instructions.md')
-    return instructions.decode('utf-8')
-
+    instructions = files(__package__).joinpath('resources/instructions.md').read_text(encoding='utf-8')
+    return instructions

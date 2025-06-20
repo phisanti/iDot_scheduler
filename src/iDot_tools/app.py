@@ -5,12 +5,13 @@ from .ui_utils import visualise_input_data
 from .core import generate_worklist
 from .constants import ParallelisationType  # Add this import at the top
 from .output_check_view import visualise_plate_output
-
+from . import __version__
 
 def iDotScheduler():
     with gr.Blocks(theme="default", css="footer {visibility: hidden} .container {max-width: 1500px; margin: auto}") as app:
         with gr.Row():
             with gr.Column(scale=1):
+                gr.Markdown(f"**Version:** {__version__}", elem_classes="version-info")
                 gr.Markdown(read_instructions())
 
             with gr.Column(scale=9):

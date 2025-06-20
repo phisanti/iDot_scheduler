@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iDot_scheduler"
+version = "0.8.2"
+description = "A Python tool for automating pipetting worksheets generation for the iDot liquid dispenser"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["pipetting", "liquid-dispensing", "automation", "worklist"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "gradio",
+    "pandas",
+    "numpy",
+    "openpyxl"
+]
+
+[project.urls]
+Homepage = "https://github.com/phisanti/iDot_scheduler"
+Repository = "https://github.com/phisanti/iDot_scheduler"
+Issues = "https://github.com/phisanti/iDot_scheduler/issues"
+
+[project.scripts]
+idot-scheduler = "iDot_tools.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+iDot_tools = ["resources/instructions.md"]

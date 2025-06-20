@@ -7,7 +7,7 @@ A Python tool for automating pipetting worksheets generation for the iDot liquid
 Create a virtual environment before installation:
 
 ```bash
-conda create -n idot_env python=3.9
+conda create -n idot_env python=3.12
 conda activate idot_env
 ```
 
